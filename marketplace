@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Маркетплейс — Платформа</title>
-    
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-    
+
     <style>
         :root {
             --primary: #667eea;
@@ -38,7 +38,6 @@
 
         .app-wrapper { max-width: 1100px; margin: 0 auto; }
 
-        /* Навигация */
         .navbar {
             background: rgba(255,255,255,0.95);
             backdrop-filter: blur(20px);
@@ -81,7 +80,6 @@
         .card h2 { margin-bottom: 16px; }
         .card h3 { margin-bottom: 12px; }
 
-        /* Сетка товаров */
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -102,7 +100,6 @@
         .product-card .product-price { font-weight: 700; font-size: 18px; color: var(--primary); margin-bottom: 8px; }
         .product-card .product-actions { display: flex; gap: 6px; }
 
-        /* Формы */
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; }
         .form-group input, .form-group textarea, .form-group select {
@@ -116,19 +113,16 @@
         .form-row { display: flex; gap: 12px; }
         .form-row .form-group { flex: 1; }
 
-        /* Таблица */
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
         th { background: var(--bg); font-weight: 600; }
 
-        /* Корзина */
         .cart-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 12px; border-bottom: 1px solid var(--border); gap: 12px;
         }
         .cart-total { text-align: right; font-size: 18px; font-weight: 700; padding: 16px 0; }
 
-        /* Модалка */
         .modal {
             position: fixed; inset: 0; z-index: 200;
             display: flex; align-items: center; justify-content: center;
@@ -144,12 +138,10 @@
             font-size: 24px; background: none; border: none; cursor: pointer;
         }
 
-        /* QR */
         .qr-container { text-align: center; padding: 20px; }
         .qr-container img { width: 200px; height: 200px; border-radius: 8px; }
         .payment-status { text-align: center; padding: 20px; }
 
-        /* Toast */
         .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 2000; }
         .toast {
             padding: 12px 20px; border-radius: 8px; color: white;
@@ -203,8 +195,8 @@
                 <button class="btn btn-outline" onclick="App.register()" style="width:100%; margin-top:8px;">Зарегистрироваться</button>
                 <div class="message error" id="loginError" style="color:var(--danger); text-align:center; margin-top:10px;"></div>
                 <p style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-light);">
-                    👑 Админ: admin@example.com / admin123<br>
-                    👤 Тест: user@example.com / user123
+                    👑 Админ: admin@marketplace.ru / admin123<br>
+                    👤 Тест: user@marketplace.ru / user123
                 </p>
             </div>
         </div>
@@ -255,13 +247,13 @@
             <div class="card">
                 <h2>👥 Пользователи</h2>
                 <table>
-                    <thead><tr><th>Email</th><th>Имя</th><th>Роль</th><th>Заказов</th><th>Дата регистрации</th></tr></thead>
-                    <tbody id="adminUsersTable"><tr><td colspan="5" class="loading">Загрузка...</td></tr></tbody>
+                    <thead><tr><th>Email</th><th>Имя</th><th>Роль</th><th>Дата регистрации</th></tr></thead>
+                    <tbody id="adminUsersTable"><tr><td colspan="4" class="loading">Загрузка...</td></tr></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Модалка товара (админ) -->
+        <!-- Модалка товара -->
         <div class="modal hidden" id="productModal">
             <div class="modal-overlay" onclick="App.closeProductModal()"></div>
             <div class="modal-content">
@@ -275,7 +267,7 @@
                         <div class="form-group"><label>Цена (₽)</label><input type="number" id="prodPrice" min="1" required></div>
                         <div class="form-group">
                             <label>Тип</label>
-                            <select id="prodType">
+                            <select id="prodType" onchange="document.getElementById('mediaFileGroup').style.display=this.value==='digital'?'block':'none'">
                                 <option value="product">Товар</option>
                                 <option value="service">Услуга</option>
                                 <option value="digital">Цифровой файл</option>
@@ -288,9 +280,8 @@
                         <div id="prodImagePreview" style="margin-top:8px;"></div>
                     </div>
                     <div class="form-group" id="mediaFileGroup" style="display:none;">
-                        <label>Медиафайл (для цифровых товаров)</label>
+                        <label>Медиафайл (PDF, ZIP, MP4)</label>
                         <input type="file" id="prodMediaFile">
-                        <small style="color:var(--text-light);">PDF, ZIP, MP4 и др.</small>
                     </div>
                     <div class="form-group">
                         <label>Статус</label>
@@ -322,17 +313,18 @@
     <script>
     // ==================== FIREBASE КОНФИГ ====================
     const firebaseConfig = {
-        apiKey: "AIzaSyYOUR_API_KEY",
-        authDomain: "your-project.firebaseapp.com",
-        projectId: "your-project-id",
-        storageBucket: "your-project.appspot.com",
-        messagingSenderId: "123456789",
-        appId: "1:123456789:web:abc123"
+        apiKey: "AIzaSyDqDMBG3PmWKHmRxSCzNnFhS4qPJjBKyEU",
+        authDomain: "marketplace-platform-8de6f.firebaseapp.com",
+        databaseURL: "https://marketplace-platform-8de6f-default-rtdb.firebaseio.com",
+        projectId: "marketplace-platform-8de6f",
+        storageBucket: "marketplace-platform-8de6f.appspot.com",
+        messagingSenderId: "994831075387",
+        appId: "1:994831075387:web:6a5f3c9b2e7d1a4f8e9c0b"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.firestore();
+    const db = firebase.database();
     const storage = firebase.storage();
 
     // ==================== ПРИЛОЖЕНИЕ ====================
@@ -341,8 +333,6 @@
         let cart = [];
         let allProducts = [];
         let currentPage = 'catalog';
-        let productImageFile = null;
-        let productMediaFile = null;
 
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         function init() {
@@ -357,71 +347,46 @@
                 }
             });
 
-            // Навигация
             document.getElementById('navLinks').addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-page]');
-                if (btn) {
-                    const page = btn.dataset.page;
-                    navigateTo(page);
-                }
-            });
-
-            // Переключение типа товара
-            document.getElementById('prodType')?.addEventListener('change', function() {
-                document.getElementById('mediaFileGroup').style.display = 
-                    this.value === 'digital' ? 'block' : 'none';
+                if (btn) navigateTo(btn.dataset.page);
             });
         }
 
         async function loadUserData() {
             if (!currentUser) return;
-            const userDoc = await db.collection('users').doc(currentUser.uid).get();
-            if (!userDoc.exists) {
-                // Создаём профиль
-                const isAdmin = currentUser.email === 'admin@example.com';
-                await db.collection('users').doc(currentUser.uid).set({
+            
+            // Проверяем/создаём профиль
+            const userRef = db.ref('users/' + currentUser.uid);
+            const userSnap = await userRef.once('value');
+            
+            if (!userSnap.exists()) {
+                const isAdmin = currentUser.email === 'admin@marketplace.ru';
+                await userRef.set({
                     email: currentUser.email,
-                    name: currentUser.displayName || currentUser.email.split('@')[0],
+                    name: currentUser.email.split('@')[0],
                     role: isAdmin ? 'admin' : 'user',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: Date.now(),
                 });
-                // Создаём админские товары при первом входе админа
-                if (isAdmin) await seedAdminProducts();
             }
+            
             // Загружаем корзину
-            const cartDoc = await db.collection('carts').doc(currentUser.uid).get();
-            if (cartDoc.exists) {
-                cart = cartDoc.data().items || [];
+            const cartSnap = await db.ref('carts/' + currentUser.uid).once('value');
+            if (cartSnap.exists()) {
+                cart = cartSnap.val().items || [];
             }
             updateCartCount();
         }
 
-        async function seedAdminProducts() {
-            const existing = await db.collection('products').limit(1).get();
-            if (!existing.empty) return;
-            
-            const demoProducts = [
-                { name: 'Методичка по курсовой', description: 'PDF-файл с пошаговым планом', price: 299, type: 'digital', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
-                { name: 'Консультация 30 мин', description: 'Онлайн-созвон с проверкой работы', price: 1500, type: 'service', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
-                { name: 'Шаблон презентации', description: 'Готовый шаблон PowerPoint', price: 199, type: 'digital', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
-                { name: 'Проверка ВКР', description: 'Полная проверка с правками', price: 3000, type: 'service', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
-            ];
-            
-            for (const p of demoProducts) {
-                await db.collection('products').add(p);
-            }
-        }
-
-        // ==================== UI ====================
         function showAuthenticatedUI() {
             document.getElementById('loginPage').classList.remove('active');
             document.getElementById('navLinks').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'inline-flex';
             document.getElementById('userNameDisplay').textContent = `👤 ${currentUser.email}`;
             
-            // Проверяем роль
-            db.collection('users').doc(currentUser.uid).get().then(doc => {
-                if (doc.exists && doc.data().role === 'admin') {
+            // Проверяем роль админа
+            db.ref('users/' + currentUser.uid + '/role').once('value').then(snap => {
+                if (snap.val() === 'admin') {
                     document.getElementById('navAdmin').style.display = 'inline-flex';
                 }
             });
@@ -443,13 +408,7 @@
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
             
-            const pageMap = {
-                'catalog': 'catalogPage',
-                'cart': 'cartPage',
-                'orders': 'ordersPage',
-                'admin': 'adminPage',
-            };
-            
+            const pageMap = { catalog: 'catalogPage', cart: 'cartPage', orders: 'ordersPage', admin: 'adminPage' };
             const pageId = pageMap[page];
             if (pageId) {
                 document.getElementById(pageId).classList.add('active');
@@ -497,7 +456,7 @@
         }
 
         async function logout() {
-            await saveCartToFirestore();
+            await saveCartToDB();
             await auth.signOut();
             cart = [];
             updateCartCount();
@@ -508,15 +467,11 @@
             const grid = document.getElementById('productsGrid');
             grid.innerHTML = '<div class="loading">Загрузка...</div>';
             
-            const snapshot = await db.collection('products')
-                .where('status', '==', 'active')
-                .orderBy('createdAt', 'desc')
-                .get();
+            const snap = await db.ref('products').orderByChild('status').equalTo('active').once('value');
+            const data = snap.val() || {};
             
-            allProducts = [];
-            snapshot.forEach(doc => {
-                allProducts.push({ id: doc.id, ...doc.data() });
-            });
+            allProducts = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+            allProducts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
             
             if (allProducts.length === 0) {
                 grid.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:40px;">Товаров пока нет</p>';
@@ -532,7 +487,6 @@
                         <div class="product-price">${p.price} ₽</div>
                         <div class="product-actions">
                             <button class="btn btn-primary btn-sm" onclick="App.addToCart('${p.id}')" style="flex:1;">🛒 В корзину</button>
-                            <button class="btn btn-outline btn-sm" onclick="App.buyNow('${p.id}')">⚡</button>
                         </div>
                     </div>
                 </div>
@@ -548,28 +502,20 @@
                 cart.push({ productId, quantity: 1 });
             }
             updateCartCount();
-            saveCartToFirestore();
+            saveCartToDB();
             toast('✅ Добавлено в корзину', 'success');
         }
 
         function removeFromCart(index) {
             cart.splice(index, 1);
             updateCartCount();
-            saveCartToFirestore();
+            saveCartToDB();
             renderCart();
-        }
-
-        function buyNow(productId) {
-            cart = [{ productId, quantity: 1 }];
-            updateCartCount();
-            saveCartToFirestore();
-            navigateTo('cart');
         }
 
         function updateCartCount() {
             const count = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-            const el = document.getElementById('cartCount');
-            if (el) el.textContent = count > 0 ? `(${count})` : '(0)';
+            document.getElementById('cartCount').textContent = count > 0 ? `(${count})` : '(0)';
         }
 
         function renderCart() {
@@ -586,8 +532,7 @@
             
             let total = 0;
             container.innerHTML = cart.map((item, index) => {
-                const product = allProducts.find(p => p.id === item.productId) || 
-                    { name: 'Товар удалён', price: 0 };
+                const product = allProducts.find(p => p.id === item.productId) || { name: 'Товар удалён', price: 0 };
                 const subtotal = product.price * (item.quantity || 1);
                 total += subtotal;
                 return `
@@ -609,12 +554,12 @@
             checkoutBtn.style.display = 'block';
         }
 
-        async function saveCartToFirestore() {
+        async function saveCartToDB() {
             if (!currentUser) return;
-            await db.collection('carts').doc(currentUser.uid).set({
+            await db.ref('carts/' + currentUser.uid).set({
                 items: cart,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            }, { merge: true });
+                updatedAt: Date.now(),
+            });
         }
 
         // ==================== ОПЛАТА ====================
@@ -626,91 +571,69 @@
                 return sum + (product ? product.price * (item.quantity || 1) : 0);
             }, 0);
             
-            const modal = document.getElementById('paymentModal');
-            const content = document.getElementById('paymentContent');
-            
-            // Генерируем ссылку СБП (в реальном проекте — через API банка)
             const orderId = 'ORD-' + Date.now();
             const sbpLink = `https://qr.nspk.ru/AS100068ZRHKMOBITSJCKH7LPCD0L0SM?type=01&bank=100000000111&sum=${total * 100}`;
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(sbpLink)}&margin=10`;
             
-            content.innerHTML = `
+            document.getElementById('paymentContent').innerHTML = `
                 <div class="qr-container">
                     <h3>Сумма к оплате: ${total} ₽</h3>
                     <p style="color:var(--text-light);">Заказ №${orderId}</p>
                     <img src="${qrUrl}" alt="QR-код" onerror="this.style.background='#eee'">
-                    <p style="margin-top:12px; font-size:13px; color:var(--text-light);">
-                        Отсканируйте QR-код через банковское приложение<br>
-                        или нажмите кнопку ниже
-                    </p>
                     <button class="btn btn-primary" onclick="App.simulatePayment('${orderId}', ${total})" style="margin-top:12px;">
                         ✅ Я оплатил(а)
                     </button>
-                    <button class="btn btn-outline" onclick="window.open('${sbpLink}', '_blank')" style="margin-top:8px;">
-                        📱 Открыть в приложении банка
-                    </button>
                     <p style="font-size:11px; color:var(--text-light); margin-top:8px;">
-                        ⚠️ Демо-режим: нажмите «Я оплатил» для симуляции
+                        Демо-режим: нажмите «Я оплатил» для симуляции
                     </p>
                 </div>
             `;
             
-            modal.classList.remove('hidden');
+            document.getElementById('paymentModal').classList.remove('hidden');
         }
 
         async function simulatePayment(orderId, total) {
-            const productIds = cart.map(item => item.productId);
-            const productsSnapshot = await db.collection('products')
-                .where(firebase.firestore.FieldPath.documentId(), 'in', productIds)
-                .get();
+            const orderItems = [];
             
-            const products = [];
-            productsSnapshot.forEach(doc => {
-                products.push({ id: doc.id, ...doc.data() });
-            });
+            for (const cartItem of cart) {
+                const snap = await db.ref('products/' + cartItem.productId).once('value');
+                const product = snap.val() || { name: 'Неизвестно', price: 0, type: 'product', mediaUrl: '' };
+                orderItems.push({
+                    productId: cartItem.productId,
+                    productName: product.name,
+                    price: product.price,
+                    quantity: cartItem.quantity || 1,
+                    type: product.type || 'product',
+                    mediaUrl: product.mediaUrl || '',
+                });
+            }
             
-            // Создаём заказ
             const orderData = {
                 orderId,
                 userId: currentUser.uid,
                 userEmail: currentUser.email,
-                items: cart.map(item => {
-                    const product = products.find(p => p.id === item.productId);
-                    return {
-                        productId: item.productId,
-                        productName: product?.name || 'Неизвестно',
-                        price: product?.price || 0,
-                        quantity: item.quantity || 1,
-                        type: product?.type || 'product',
-                        mediaUrl: product?.mediaUrl || '',
-                    };
-                }),
+                items: orderItems,
                 total,
                 status: 'paid',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: Date.now(),
             };
             
-            await db.collection('orders').add(orderData);
+            await db.ref('orders').push(orderData);
             
-            // Очищаем корзину
             cart = [];
-            await saveCartToFirestore();
+            await saveCartToDB();
             updateCartCount();
             
-            // Показываем результат
-            const content = document.getElementById('paymentContent');
-            content.innerHTML = `
+            document.getElementById('paymentContent').innerHTML = `
                 <div class="payment-status">
                     <h3>✅ Оплата прошла успешно!</h3>
                     <p>Заказ №${orderId} на сумму ${total} ₽</p>
                     <div style="margin-top:16px; text-align:left;">
-                        <strong>Ваши покупки:</strong>
-                        ${orderData.items.map(i => `
+                        ${orderItems.map(i => `
                             <div style="padding:8px; margin:4px 0; background:var(--bg); border-radius:6px;">
-                                ${i.productName} × ${i.quantity}
+                                ${i.productName} × ${i.quantity} — ${i.price * i.quantity} ₽
                                 ${i.type === 'digital' && i.mediaUrl ? 
-                                    `<br><a href="${i.mediaUrl}" target="_blank" class="btn btn-success btn-xs" style="margin-top:4px;">📥 Скачать файл</a>` : 
-                                    ''}
+                                    `<br><a href="${i.mediaUrl}" target="_blank" class="btn btn-success btn-xs" style="margin-top:4px;">📥 Скачать файл</a>` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -730,35 +653,33 @@
             const container = document.getElementById('ordersList');
             container.innerHTML = '<p style="color:var(--text-light);">Загрузка...</p>';
             
-            const snapshot = await db.collection('orders')
-                .where('userId', '==', currentUser.uid)
-                .orderBy('createdAt', 'desc')
-                .get();
+            const snap = await db.ref('orders').orderByChild('userId').equalTo(currentUser.uid).once('value');
+            const data = snap.val() || {};
             
-            if (snapshot.empty) {
+            const orders = Object.values(data);
+            orders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            
+            if (orders.length === 0) {
                 container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:40px;">Заказов пока нет</p>';
                 return;
             }
             
-            container.innerHTML = snapshot.docs.map(doc => {
-                const order = doc.data();
-                const date = order.createdAt ? order.createdAt.toDate().toLocaleString('ru') : '';
+            container.innerHTML = orders.map(order => {
+                const date = order.createdAt ? new Date(order.createdAt).toLocaleString('ru') : '';
                 return `
                     <div class="card" style="margin-bottom:12px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                            <div>
-                                <strong>Заказ №${order.orderId}</strong>
-                                <span class="badge badge-success" style="margin-left:8px;">Оплачен</span>
-                            </div>
-                            <div style="font-size:14px; color:var(--text-light);">${date}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>Заказ №${order.orderId}</strong>
+                            <span class="badge badge-success">Оплачен</span>
                         </div>
+                        <div style="font-size:12px; color:var(--text-light);">${date}</div>
                         <div style="margin-top:8px;">
                             ${order.items.map(i => `
-                                <div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                                <div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;">
                                     <span>${i.productName} × ${i.quantity}</span>
                                     <span>${i.price * i.quantity} ₽</span>
                                     ${i.type === 'digital' && i.mediaUrl ? 
-                                        `<a href="${i.mediaUrl}" target="_blank" class="btn btn-success btn-xs">📥 Скачать</a>` : ''}
+                                        `<a href="${i.mediaUrl}" target="_blank" class="btn btn-success btn-xs">📥</a>` : ''}
                                 </div>
                             `).join('')}
                             <div style="text-align:right; font-weight:700; margin-top:8px;">Итого: ${order.total} ₽</div>
@@ -776,58 +697,51 @@
 
         async function loadAdminProducts() {
             const tbody = document.getElementById('adminProductsTable');
-            const snapshot = await db.collection('products').orderBy('createdAt', 'desc').get();
+            const snap = await db.ref('products').once('value');
+            const data = snap.val() || {};
             
-            if (snapshot.empty) {
+            const products = Object.entries(data);
+            if (products.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6">Нет товаров</td></tr>';
                 return;
             }
             
-            tbody.innerHTML = snapshot.docs.map(doc => {
-                const p = doc.data();
-                return `
-                    <tr>
-                        <td><img src="${p.imageUrl || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; background:#eee;" onerror="this.style.display='none'"></td>
-                        <td>${p.name}</td>
-                        <td>${p.price} ₽</td>
-                        <td>${p.type}</td>
-                        <td><span class="badge ${p.status==='active'?'badge-success':'badge-warning'}">${p.status}</span></td>
-                        <td>
-                            <button class="btn btn-warning btn-xs" onclick="App.editProduct('${doc.id}')">✏️</button>
-                            <button class="btn btn-danger btn-xs" onclick="App.deleteProduct('${doc.id}')">🗑</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            allProducts = products.map(([id, val]) => ({ id, ...val }));
+            
+            tbody.innerHTML = allProducts.map(p => `
+                <tr>
+                    <td><img src="${p.imageUrl || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; background:#eee;" onerror="this.style.display='none'"></td>
+                    <td>${p.name}</td>
+                    <td>${p.price} ₽</td>
+                    <td>${p.type || 'product'}</td>
+                    <td><span class="badge ${p.status==='active'?'badge-success':'badge-warning'}">${p.status}</span></td>
+                    <td>
+                        <button class="btn btn-warning btn-xs" onclick="App.editProduct('${p.id}')">✏️</button>
+                        <button class="btn btn-danger btn-xs" onclick="App.deleteProduct('${p.id}')">🗑</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function loadAdminUsers() {
             const tbody = document.getElementById('adminUsersTable');
-            const snapshot = await db.collection('users').get();
+            const snap = await db.ref('users').once('value');
+            const data = snap.val() || {};
             
-            if (snapshot.empty) {
-                tbody.innerHTML = '<tr><td colspan="5">Нет пользователей</td></tr>';
+            const users = Object.entries(data);
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">Нет пользователей</td></tr>';
                 return;
             }
             
-            const users = [];
-            snapshot.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
-            
-            // Считаем заказы для каждого
-            const rows = await Promise.all(users.map(async (u) => {
-                const ordersSnap = await db.collection('orders').where('userId', '==', u.id).get();
-                return `
-                    <tr>
-                        <td>${u.email}</td>
-                        <td>${u.name || '-'}</td>
-                        <td>${u.role || 'user'}</td>
-                        <td>${ordersSnap.size}</td>
-                        <td>${u.createdAt ? u.createdAt.toDate().toLocaleDateString('ru') : '-'}</td>
-                    </tr>
-                `;
-            }));
-            
-            tbody.innerHTML = rows.join('');
+            tbody.innerHTML = users.map(([id, u]) => `
+                <tr>
+                    <td>${u.email}</td>
+                    <td>${u.name || '-'}</td>
+                    <td>${u.role || 'user'}</td>
+                    <td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString('ru') : '-'}</td>
+                </tr>
+            `).join('');
         }
 
         function openProductModal(productId = null) {
@@ -862,18 +776,16 @@
 
         function closeProductModal() {
             document.getElementById('productModal').classList.add('hidden');
-            productImageFile = null;
-            productMediaFile = null;
         }
 
         function previewProductImage(input) {
-            productImageFile = input.files[0];
-            if (productImageFile) {
+            const file = input.files[0];
+            if (file) {
                 const reader = new FileReader();
                 reader.onload = e => {
                     document.getElementById('prodImagePreview').innerHTML = `<img src="${e.target.result}" style="max-width:200px; border-radius:8px;">`;
                 };
-                reader.readAsDataURL(productImageFile);
+                reader.readAsDataURL(file);
             }
         }
 
@@ -894,38 +806,35 @@
                 let imageUrl = '';
                 let mediaUrl = '';
                 
-                // Загружаем фото
+                // Фото
                 const imgFile = document.getElementById('prodImage').files[0];
                 if (imgFile) {
                     const imgRef = storage.ref(`products/${Date.now()}_${imgFile.name}`);
                     await imgRef.put(imgFile);
                     imageUrl = await imgRef.getDownloadURL();
                 } else if (id) {
-                    const existing = await db.collection('products').doc(id).get();
-                    imageUrl = existing.data()?.imageUrl || '';
+                    const snap = await db.ref('products/' + id).once('value');
+                    imageUrl = snap.val()?.imageUrl || '';
                 }
                 
-                // Загружаем медиафайл
+                // Медиафайл
                 const mediaFile = document.getElementById('prodMediaFile').files[0];
                 if (mediaFile && type === 'digital') {
                     const mediaRef = storage.ref(`media/${Date.now()}_${mediaFile.name}`);
                     await mediaRef.put(mediaFile);
                     mediaUrl = await mediaRef.getDownloadURL();
                 } else if (id && type === 'digital') {
-                    const existing = await db.collection('products').doc(id).get();
-                    mediaUrl = existing.data()?.mediaUrl || '';
+                    const snap = await db.ref('products/' + id).once('value');
+                    mediaUrl = snap.val()?.mediaUrl || '';
                 }
                 
-                const productData = {
-                    name, description, price, type, status, imageUrl, mediaUrl,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                };
+                const productData = { name, description, price, type, status, imageUrl, mediaUrl, updatedAt: Date.now() };
                 
                 if (id) {
-                    await db.collection('products').doc(id).update(productData);
+                    await db.ref('products/' + id).update(productData);
                 } else {
-                    productData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-                    await db.collection('products').add(productData);
+                    productData.createdAt = Date.now();
+                    await db.ref('products').push(productData);
                 }
                 
                 closeProductModal();
@@ -938,16 +847,16 @@
         }
 
         async function editProduct(productId) {
-            const doc = await db.collection('products').doc(productId).get();
-            if (doc.exists) {
-                allProducts = [{ id: doc.id, ...doc.data() }];
+            const snap = await db.ref('products/' + productId).once('value');
+            if (snap.exists()) {
+                allProducts = [{ id: productId, ...snap.val() }];
                 openProductModal(productId);
             }
         }
 
         async function deleteProduct(productId) {
             if (confirm('Удалить товар?')) {
-                await db.collection('products').doc(productId).delete();
+                await db.ref('products/' + productId).remove();
                 await loadAdminProducts();
                 await loadProducts();
                 toast('🗑 Товар удалён', 'info');
@@ -965,11 +874,11 @@
 
         return {
             init, login, register, logout,
-            addToCart, removeFromCart, buyNow, checkout,
+            addToCart, removeFromCart, checkout,
             simulatePayment, closePaymentModal,
             openProductModal, closeProductModal, previewProductImage,
             saveProduct, editProduct, deleteProduct,
-            navigateTo, loadProducts, renderCart,
+            navigateTo,
         };
     })();
 
