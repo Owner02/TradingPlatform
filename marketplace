@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Маркетплейс — Платформа</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    
+    <style>
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --bg: #f5f5f7;
+            --card-bg: #ffffff;
+            --text: #1d1d1f;
+            --text-light: #6e6e73;
+            --border: #e5e5ea;
+            --radius: 14px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-wrapper { max-width: 1100px; margin: 0 auto; }
+
+        /* Навигация */
+        .navbar {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius);
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: var(--shadow);
+        }
+        .navbar .logo { font-size: 22px; font-weight: 700; }
+        .navbar .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+        .navbar .user-info { font-size: 14px; color: var(--text-light); }
+
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px;
+            font-size: 14px; cursor: pointer; font-weight: 600;
+            transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: #333; }
+        .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
+        .btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 4px; }
+
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card {
+            background: var(--card-bg); border-radius: var(--radius);
+            padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px;
+        }
+        .card h2 { margin-bottom: 16px; }
+        .card h3 { margin-bottom: 12px; }
+
+        /* Сетка товаров */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .product-card {
+            background: var(--card-bg); border-radius: var(--radius);
+            overflow: hidden; box-shadow: var(--shadow); transition: transform 0.2s;
+            display: flex; flex-direction: column;
+        }
+        .product-card:hover { transform: translateY(-4px); }
+        .product-card img {
+            width: 100%; height: 180px; object-fit: cover; background: #e0e0e0;
+        }
+        .product-card .product-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .product-card .product-name { font-weight: 600; margin-bottom: 4px; }
+        .product-card .product-desc { font-size: 13px; color: var(--text-light); margin-bottom: 8px; flex: 1; }
+        .product-card .product-price { font-weight: 700; font-size: 18px; color: var(--primary); margin-bottom: 8px; }
+        .product-card .product-actions { display: flex; gap: 6px; }
+
+        /* Формы */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 12px; border: 2px solid var(--border);
+            border-radius: 8px; font-size: 15px; font-family: inherit;
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none; border-color: var(--primary);
+        }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        /* Таблица */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { background: var(--bg); font-weight: 600; }
+
+        /* Корзина */
+        .cart-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px; border-bottom: 1px solid var(--border); gap: 12px;
+        }
+        .cart-total { text-align: right; font-size: 18px; font-weight: 700; padding: 16px 0; }
+
+        /* Модалка */
+        .modal {
+            position: fixed; inset: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal.hidden { display: none; }
+        .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+        .modal-content {
+            position: relative; background: var(--card-bg); border-radius: var(--radius);
+            padding: 30px; width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-close {
+            position: absolute; top: 12px; right: 16px;
+            font-size: 24px; background: none; border: none; cursor: pointer;
+        }
+
+        /* QR */
+        .qr-container { text-align: center; padding: 20px; }
+        .qr-container img { width: 200px; height: 200px; border-radius: 8px; }
+        .payment-status { text-align: center; padding: 20px; }
+
+        /* Toast */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 2000; }
+        .toast {
+            padding: 12px 20px; border-radius: 8px; color: white;
+            font-weight: 500; margin-top: 8px; animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: #17a2b8; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .loading { text-align: center; padding: 40px; color: var(--text-light); }
+        .badge {
+            display: inline-block; padding: 2px 10px; border-radius: 12px;
+            font-size: 12px; font-weight: 600;
+        }
+        .badge-success { background: #e8f5e9; color: #2e7d32; }
+        .badge-warning { background: #fff3e0; color: #e65100; }
+
+        @media (max-width: 600px) {
+            .navbar { flex-direction: column; text-align: center; }
+            .form-row { flex-direction: column; }
+            .products-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Навигация -->
+        <nav class="navbar">
+            <span class="logo">🛍️ Маркетплейс</span>
+            <div class="nav-links" id="navLinks" style="display:none;">
+                <button class="btn btn-outline btn-sm active" data-page="catalog">🏪 Каталог</button>
+                <button class="btn btn-outline btn-sm" data-page="cart">🛒 Корзина <span id="cartCount">0</span></button>
+                <button class="btn btn-outline btn-sm" data-page="orders">📦 Заказы</button>
+                <button class="btn btn-outline btn-sm" data-page="admin" id="navAdmin" style="display:none;">⚙️ Админ</button>
+            </div>
+            <div class="user-info">
+                <span id="userNameDisplay"></span>
+                <button class="btn btn-sm btn-danger" id="logoutBtn" style="display:none;" onclick="App.logout()">Выйти</button>
+            </div>
+        </nav>
+
+        <!-- Страница входа -->
+        <div class="page active" id="loginPage">
+            <div class="card" style="max-width:400px; margin:40px auto;">
+                <h2>🔐 Вход / Регистрация</h2>
+                <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="user@example.com"></div>
+                <div class="form-group"><label>Пароль</label><input type="password" id="loginPassword" placeholder="••••"></div>
+                <button class="btn btn-primary" onclick="App.login()" style="width:100%;">Войти</button>
+                <button class="btn btn-outline" onclick="App.register()" style="width:100%; margin-top:8px;">Зарегистрироваться</button>
+                <div class="message error" id="loginError" style="color:var(--danger); text-align:center; margin-top:10px;"></div>
+                <p style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-light);">
+                    👑 Админ: admin@example.com / admin123<br>
+                    👤 Тест: user@example.com / user123
+                </p>
+            </div>
+        </div>
+
+        <!-- Каталог -->
+        <div class="page" id="catalogPage">
+            <div class="card">
+                <h2>🏪 Каталог товаров и услуг</h2>
+                <div class="products-grid" id="productsGrid">
+                    <div class="loading">Загрузка товаров...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Корзина -->
+        <div class="page" id="cartPage">
+            <div class="card">
+                <h2>🛒 Корзина</h2>
+                <div id="cartItems"><p style="color:var(--text-light);">Корзина пуста</p></div>
+                <div class="cart-total" id="cartTotal" style="display:none;"></div>
+                <button class="btn btn-success" id="checkoutBtn" style="display:none; width:100%;" onclick="App.checkout()">
+                    💳 Перейти к оплате
+                </button>
+            </div>
+        </div>
+
+        <!-- Заказы -->
+        <div class="page" id="ordersPage">
+            <div class="card">
+                <h2>📦 Мои заказы</h2>
+                <div id="ordersList"><p style="color:var(--text-light);">Загрузка...</p></div>
+            </div>
+        </div>
+
+        <!-- Админ-панель -->
+        <div class="page" id="adminPage">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <h2 style="margin:0;">⚙️ Управление товарами</h2>
+                    <button class="btn btn-primary" onclick="App.openProductModal()">+ Добавить товар</button>
+                </div>
+                <table style="margin-top:16px;">
+                    <thead><tr><th>Фото</th><th>Название</th><th>Цена</th><th>Тип</th><th>Статус</th><th>Действия</th></tr></thead>
+                    <tbody id="adminProductsTable"><tr><td colspan="6" class="loading">Загрузка...</td></tr></tbody>
+                </table>
+            </div>
+            
+            <div class="card">
+                <h2>👥 Пользователи</h2>
+                <table>
+                    <thead><tr><th>Email</th><th>Имя</th><th>Роль</th><th>Заказов</th><th>Дата регистрации</th></tr></thead>
+                    <tbody id="adminUsersTable"><tr><td colspan="5" class="loading">Загрузка...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Модалка товара (админ) -->
+        <div class="modal hidden" id="productModal">
+            <div class="modal-overlay" onclick="App.closeProductModal()"></div>
+            <div class="modal-content">
+                <button class="modal-close" onclick="App.closeProductModal()">&times;</button>
+                <h2 id="productModalTitle">Добавить товар</h2>
+                <form onsubmit="return false;">
+                    <input type="hidden" id="editProductId">
+                    <div class="form-group"><label>Название</label><input type="text" id="prodName" required></div>
+                    <div class="form-group"><label>Описание</label><textarea id="prodDesc"></textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Цена (₽)</label><input type="number" id="prodPrice" min="1" required></div>
+                        <div class="form-group">
+                            <label>Тип</label>
+                            <select id="prodType">
+                                <option value="product">Товар</option>
+                                <option value="service">Услуга</option>
+                                <option value="digital">Цифровой файл</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Фото / Превью</label>
+                        <input type="file" id="prodImage" accept="image/*" onchange="App.previewProductImage(this)">
+                        <div id="prodImagePreview" style="margin-top:8px;"></div>
+                    </div>
+                    <div class="form-group" id="mediaFileGroup" style="display:none;">
+                        <label>Медиафайл (для цифровых товаров)</label>
+                        <input type="file" id="prodMediaFile">
+                        <small style="color:var(--text-light);">PDF, ZIP, MP4 и др.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Статус</label>
+                        <select id="prodStatus">
+                            <option value="active">Активен</option>
+                            <option value="draft">Черновик</option>
+                            <option value="archived">Архив</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="App.saveProduct()" style="width:100%;">💾 Сохранить</button>
+                    <div id="productModalError" style="color:var(--danger); text-align:center; margin-top:8px;"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модалка оплаты -->
+        <div class="modal hidden" id="paymentModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <button class="modal-close" onclick="App.closePaymentModal()">&times;</button>
+                <h2>💳 Оплата заказа</h2>
+                <div id="paymentContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+    // ==================== FIREBASE КОНФИГ ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyYOUR_API_KEY",
+        authDomain: "your-project.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abc123"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // ==================== ПРИЛОЖЕНИЕ ====================
+    const App = (() => {
+        let currentUser = null;
+        let cart = [];
+        let allProducts = [];
+        let currentPage = 'catalog';
+        let productImageFile = null;
+        let productMediaFile = null;
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        function init() {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    currentUser = user;
+                    await loadUserData();
+                    showAuthenticatedUI();
+                } else {
+                    currentUser = null;
+                    showLoginUI();
+                }
+            });
+
+            // Навигация
+            document.getElementById('navLinks').addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-page]');
+                if (btn) {
+                    const page = btn.dataset.page;
+                    navigateTo(page);
+                }
+            });
+
+            // Переключение типа товара
+            document.getElementById('prodType')?.addEventListener('change', function() {
+                document.getElementById('mediaFileGroup').style.display = 
+                    this.value === 'digital' ? 'block' : 'none';
+            });
+        }
+
+        async function loadUserData() {
+            if (!currentUser) return;
+            const userDoc = await db.collection('users').doc(currentUser.uid).get();
+            if (!userDoc.exists) {
+                // Создаём профиль
+                const isAdmin = currentUser.email === 'admin@example.com';
+                await db.collection('users').doc(currentUser.uid).set({
+                    email: currentUser.email,
+                    name: currentUser.displayName || currentUser.email.split('@')[0],
+                    role: isAdmin ? 'admin' : 'user',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+                // Создаём админские товары при первом входе админа
+                if (isAdmin) await seedAdminProducts();
+            }
+            // Загружаем корзину
+            const cartDoc = await db.collection('carts').doc(currentUser.uid).get();
+            if (cartDoc.exists) {
+                cart = cartDoc.data().items || [];
+            }
+            updateCartCount();
+        }
+
+        async function seedAdminProducts() {
+            const existing = await db.collection('products').limit(1).get();
+            if (!existing.empty) return;
+            
+            const demoProducts = [
+                { name: 'Методичка по курсовой', description: 'PDF-файл с пошаговым планом', price: 299, type: 'digital', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
+                { name: 'Консультация 30 мин', description: 'Онлайн-созвон с проверкой работы', price: 1500, type: 'service', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
+                { name: 'Шаблон презентации', description: 'Готовый шаблон PowerPoint', price: 199, type: 'digital', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
+                { name: 'Проверка ВКР', description: 'Полная проверка с правками', price: 3000, type: 'service', status: 'active', imageUrl: '', mediaUrl: '', createdAt: new Date() },
+            ];
+            
+            for (const p of demoProducts) {
+                await db.collection('products').add(p);
+            }
+        }
+
+        // ==================== UI ====================
+        function showAuthenticatedUI() {
+            document.getElementById('loginPage').classList.remove('active');
+            document.getElementById('navLinks').style.display = 'flex';
+            document.getElementById('logoutBtn').style.display = 'inline-flex';
+            document.getElementById('userNameDisplay').textContent = `👤 ${currentUser.email}`;
+            
+            // Проверяем роль
+            db.collection('users').doc(currentUser.uid).get().then(doc => {
+                if (doc.exists && doc.data().role === 'admin') {
+                    document.getElementById('navAdmin').style.display = 'inline-flex';
+                }
+            });
+            
+            navigateTo('catalog');
+        }
+
+        function showLoginUI() {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('loginPage').classList.add('active');
+            document.getElementById('navLinks').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('userNameDisplay').textContent = '';
+            document.getElementById('navAdmin').style.display = 'none';
+        }
+
+        function navigateTo(page) {
+            currentPage = page;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('[data-page]').forEach(b => b.classList.remove('active'));
+            
+            const pageMap = {
+                'catalog': 'catalogPage',
+                'cart': 'cartPage',
+                'orders': 'ordersPage',
+                'admin': 'adminPage',
+            };
+            
+            const pageId = pageMap[page];
+            if (pageId) {
+                document.getElementById(pageId).classList.add('active');
+                const btn = document.querySelector(`[data-page="${page}"]`);
+                if (btn) btn.classList.add('active');
+                
+                if (page === 'catalog') loadProducts();
+                if (page === 'cart') renderCart();
+                if (page === 'orders') loadOrders();
+                if (page === 'admin') loadAdminData();
+            }
+        }
+
+        // ==================== АВТОРИЗАЦИЯ ====================
+        async function login() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+            
+            if (!email || !password) { errorEl.textContent = 'Заполните все поля'; return; }
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                errorEl.textContent = '';
+            } catch (e) {
+                errorEl.textContent = 'Ошибка: ' + e.message;
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+            
+            if (!email || !password) { errorEl.textContent = 'Заполните все поля'; return; }
+            if (password.length < 6) { errorEl.textContent = 'Пароль: минимум 6 символов'; return; }
+            
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                errorEl.textContent = '';
+                toast('✅ Аккаунт создан!', 'success');
+            } catch (e) {
+                errorEl.textContent = 'Ошибка: ' + e.message;
+            }
+        }
+
+        async function logout() {
+            await saveCartToFirestore();
+            await auth.signOut();
+            cart = [];
+            updateCartCount();
+        }
+
+        // ==================== ТОВАРЫ ====================
+        async function loadProducts() {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = '<div class="loading">Загрузка...</div>';
+            
+            const snapshot = await db.collection('products')
+                .where('status', '==', 'active')
+                .orderBy('createdAt', 'desc')
+                .get();
+            
+            allProducts = [];
+            snapshot.forEach(doc => {
+                allProducts.push({ id: doc.id, ...doc.data() });
+            });
+            
+            if (allProducts.length === 0) {
+                grid.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:40px;">Товаров пока нет</p>';
+                return;
+            }
+            
+            grid.innerHTML = allProducts.map(p => `
+                <div class="product-card">
+                    <img src="${p.imageUrl || 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22180%22><rect fill=%22%23e0e0e0%22 width=%22300%22 height=%22180%22/><text x=%22150%22 y=%2290%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2216%22>Нет фото</text></svg>')}" alt="${p.name}">
+                    <div class="product-body">
+                        <div class="product-name">${p.name}</div>
+                        <div class="product-desc">${p.description || ''}</div>
+                        <div class="product-price">${p.price} ₽</div>
+                        <div class="product-actions">
+                            <button class="btn btn-primary btn-sm" onclick="App.addToCart('${p.id}')" style="flex:1;">🛒 В корзину</button>
+                            <button class="btn btn-outline btn-sm" onclick="App.buyNow('${p.id}')">⚡</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== КОРЗИНА ====================
+        function addToCart(productId) {
+            const existing = cart.find(item => item.productId === productId);
+            if (existing) {
+                existing.quantity = (existing.quantity || 1) + 1;
+            } else {
+                cart.push({ productId, quantity: 1 });
+            }
+            updateCartCount();
+            saveCartToFirestore();
+            toast('✅ Добавлено в корзину', 'success');
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartCount();
+            saveCartToFirestore();
+            renderCart();
+        }
+
+        function buyNow(productId) {
+            cart = [{ productId, quantity: 1 }];
+            updateCartCount();
+            saveCartToFirestore();
+            navigateTo('cart');
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+            const el = document.getElementById('cartCount');
+            if (el) el.textContent = count > 0 ? `(${count})` : '(0)';
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            const totalEl = document.getElementById('cartTotal');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-light);">Корзина пуста</p>';
+                totalEl.style.display = 'none';
+                checkoutBtn.style.display = 'none';
+                return;
+            }
+            
+            let total = 0;
+            container.innerHTML = cart.map((item, index) => {
+                const product = allProducts.find(p => p.id === item.productId) || 
+                    { name: 'Товар удалён', price: 0 };
+                const subtotal = product.price * (item.quantity || 1);
+                total += subtotal;
+                return `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${product.name}</strong>
+                            <div style="font-size:13px; color:var(--text-light);">${product.price} ₽ × ${item.quantity || 1}</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-weight:600;">${subtotal} ₽</span>
+                            <button class="btn btn-danger btn-xs" onclick="App.removeFromCart(${index})">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            totalEl.style.display = 'block';
+            totalEl.innerHTML = `Итого: <span style="color:var(--primary);">${total} ₽</span>`;
+            checkoutBtn.style.display = 'block';
+        }
+
+        async function saveCartToFirestore() {
+            if (!currentUser) return;
+            await db.collection('carts').doc(currentUser.uid).set({
+                items: cart,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+        }
+
+        // ==================== ОПЛАТА ====================
+        function checkout() {
+            if (cart.length === 0) { toast('Корзина пуста', 'error'); return; }
+            
+            const total = cart.reduce((sum, item) => {
+                const product = allProducts.find(p => p.id === item.productId);
+                return sum + (product ? product.price * (item.quantity || 1) : 0);
+            }, 0);
+            
+            const modal = document.getElementById('paymentModal');
+            const content = document.getElementById('paymentContent');
+            
+            // Генерируем ссылку СБП (в реальном проекте — через API банка)
+            const orderId = 'ORD-' + Date.now();
+            const sbpLink = `https://qr.nspk.ru/AS100068ZRHKMOBITSJCKH7LPCD0L0SM?type=01&bank=100000000111&sum=${total * 100}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(sbpLink)}&margin=10`;
+            
+            content.innerHTML = `
+                <div class="qr-container">
+                    <h3>Сумма к оплате: ${total} ₽</h3>
+                    <p style="color:var(--text-light);">Заказ №${orderId}</p>
+                    <img src="${qrUrl}" alt="QR-код" onerror="this.style.background='#eee'">
+                    <p style="margin-top:12px; font-size:13px; color:var(--text-light);">
+                        Отсканируйте QR-код через банковское приложение<br>
+                        или нажмите кнопку ниже
+                    </p>
+                    <button class="btn btn-primary" onclick="App.simulatePayment('${orderId}', ${total})" style="margin-top:12px;">
+                        ✅ Я оплатил(а)
+                    </button>
+                    <button class="btn btn-outline" onclick="window.open('${sbpLink}', '_blank')" style="margin-top:8px;">
+                        📱 Открыть в приложении банка
+                    </button>
+                    <p style="font-size:11px; color:var(--text-light); margin-top:8px;">
+                        ⚠️ Демо-режим: нажмите «Я оплатил» для симуляции
+                    </p>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        async function simulatePayment(orderId, total) {
+            const productIds = cart.map(item => item.productId);
+            const productsSnapshot = await db.collection('products')
+                .where(firebase.firestore.FieldPath.documentId(), 'in', productIds)
+                .get();
+            
+            const products = [];
+            productsSnapshot.forEach(doc => {
+                products.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Создаём заказ
+            const orderData = {
+                orderId,
+                userId: currentUser.uid,
+                userEmail: currentUser.email,
+                items: cart.map(item => {
+                    const product = products.find(p => p.id === item.productId);
+                    return {
+                        productId: item.productId,
+                        productName: product?.name || 'Неизвестно',
+                        price: product?.price || 0,
+                        quantity: item.quantity || 1,
+                        type: product?.type || 'product',
+                        mediaUrl: product?.mediaUrl || '',
+                    };
+                }),
+                total,
+                status: 'paid',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+            
+            await db.collection('orders').add(orderData);
+            
+            // Очищаем корзину
+            cart = [];
+            await saveCartToFirestore();
+            updateCartCount();
+            
+            // Показываем результат
+            const content = document.getElementById('paymentContent');
+            content.innerHTML = `
+                <div class="payment-status">
+                    <h3>✅ Оплата прошла успешно!</h3>
+                    <p>Заказ №${orderId} на сумму ${total} ₽</p>
+                    <div style="margin-top:16px; text-align:left;">
+                        <strong>Ваши покупки:</strong>
+                        ${orderData.items.map(i => `
+                            <div style="padding:8px; margin:4px 0; background:var(--bg); border-radius:6px;">
+                                ${i.productName} × ${i.quantity}
+                                ${i.type === 'digital' && i.mediaUrl ? 
+                                    `<br><a href="${i.mediaUrl}" target="_blank" class="btn btn-success btn-xs" style="margin-top:4px;">📥 Скачать файл</a>` : 
+                                    ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="btn btn-primary" onclick="App.closePaymentModal(); App.navigateTo('orders');" style="margin-top:16px;">
+                        📦 Перейти к заказам
+                    </button>
+                </div>
+            `;
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        // ==================== ЗАКАЗЫ ====================
+        async function loadOrders() {
+            const container = document.getElementById('ordersList');
+            container.innerHTML = '<p style="color:var(--text-light);">Загрузка...</p>';
+            
+            const snapshot = await db.collection('orders')
+                .where('userId', '==', currentUser.uid)
+                .orderBy('createdAt', 'desc')
+                .get();
+            
+            if (snapshot.empty) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-light); padding:40px;">Заказов пока нет</p>';
+                return;
+            }
+            
+            container.innerHTML = snapshot.docs.map(doc => {
+                const order = doc.data();
+                const date = order.createdAt ? order.createdAt.toDate().toLocaleString('ru') : '';
+                return `
+                    <div class="card" style="margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <div>
+                                <strong>Заказ №${order.orderId}</strong>
+                                <span class="badge badge-success" style="margin-left:8px;">Оплачен</span>
+                            </div>
+                            <div style="font-size:14px; color:var(--text-light);">${date}</div>
+                        </div>
+                        <div style="margin-top:8px;">
+                            ${order.items.map(i => `
+                                <div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                                    <span>${i.productName} × ${i.quantity}</span>
+                                    <span>${i.price * i.quantity} ₽</span>
+                                    ${i.type === 'digital' && i.mediaUrl ? 
+                                        `<a href="${i.mediaUrl}" target="_blank" class="btn btn-success btn-xs">📥 Скачать</a>` : ''}
+                                </div>
+                            `).join('')}
+                            <div style="text-align:right; font-weight:700; margin-top:8px;">Итого: ${order.total} ₽</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== АДМИН ====================
+        async function loadAdminData() {
+            await loadAdminProducts();
+            await loadAdminUsers();
+        }
+
+        async function loadAdminProducts() {
+            const tbody = document.getElementById('adminProductsTable');
+            const snapshot = await db.collection('products').orderBy('createdAt', 'desc').get();
+            
+            if (snapshot.empty) {
+                tbody.innerHTML = '<tr><td colspan="6">Нет товаров</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = snapshot.docs.map(doc => {
+                const p = doc.data();
+                return `
+                    <tr>
+                        <td><img src="${p.imageUrl || ''}" style="width:40px; height:40px; object-fit:cover; border-radius:4px; background:#eee;" onerror="this.style.display='none'"></td>
+                        <td>${p.name}</td>
+                        <td>${p.price} ₽</td>
+                        <td>${p.type}</td>
+                        <td><span class="badge ${p.status==='active'?'badge-success':'badge-warning'}">${p.status}</span></td>
+                        <td>
+                            <button class="btn btn-warning btn-xs" onclick="App.editProduct('${doc.id}')">✏️</button>
+                            <button class="btn btn-danger btn-xs" onclick="App.deleteProduct('${doc.id}')">🗑</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function loadAdminUsers() {
+            const tbody = document.getElementById('adminUsersTable');
+            const snapshot = await db.collection('users').get();
+            
+            if (snapshot.empty) {
+                tbody.innerHTML = '<tr><td colspan="5">Нет пользователей</td></tr>';
+                return;
+            }
+            
+            const users = [];
+            snapshot.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
+            
+            // Считаем заказы для каждого
+            const rows = await Promise.all(users.map(async (u) => {
+                const ordersSnap = await db.collection('orders').where('userId', '==', u.id).get();
+                return `
+                    <tr>
+                        <td>${u.email}</td>
+                        <td>${u.name || '-'}</td>
+                        <td>${u.role || 'user'}</td>
+                        <td>${ordersSnap.size}</td>
+                        <td>${u.createdAt ? u.createdAt.toDate().toLocaleDateString('ru') : '-'}</td>
+                    </tr>
+                `;
+            }));
+            
+            tbody.innerHTML = rows.join('');
+        }
+
+        function openProductModal(productId = null) {
+            document.getElementById('productModal').classList.remove('hidden');
+            document.getElementById('productModalTitle').textContent = productId ? 'Редактировать' : 'Добавить товар';
+            document.getElementById('editProductId').value = productId || '';
+            document.getElementById('productModalError').textContent = '';
+            
+            if (productId) {
+                const product = allProducts.find(p => p.id === productId);
+                if (product) {
+                    document.getElementById('prodName').value = product.name || '';
+                    document.getElementById('prodDesc').value = product.description || '';
+                    document.getElementById('prodPrice').value = product.price || '';
+                    document.getElementById('prodType').value = product.type || 'product';
+                    document.getElementById('prodStatus').value = product.status || 'active';
+                    document.getElementById('mediaFileGroup').style.display = product.type === 'digital' ? 'block' : 'none';
+                    if (product.imageUrl) {
+                        document.getElementById('prodImagePreview').innerHTML = `<img src="${product.imageUrl}" style="max-width:200px; border-radius:8px;">`;
+                    }
+                }
+            } else {
+                document.getElementById('prodName').value = '';
+                document.getElementById('prodDesc').value = '';
+                document.getElementById('prodPrice').value = '';
+                document.getElementById('prodType').value = 'product';
+                document.getElementById('prodStatus').value = 'active';
+                document.getElementById('prodImagePreview').innerHTML = '';
+                document.getElementById('mediaFileGroup').style.display = 'none';
+            }
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+            productImageFile = null;
+            productMediaFile = null;
+        }
+
+        function previewProductImage(input) {
+            productImageFile = input.files[0];
+            if (productImageFile) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('prodImagePreview').innerHTML = `<img src="${e.target.result}" style="max-width:200px; border-radius:8px;">`;
+                };
+                reader.readAsDataURL(productImageFile);
+            }
+        }
+
+        async function saveProduct() {
+            const id = document.getElementById('editProductId').value;
+            const name = document.getElementById('prodName').value.trim();
+            const description = document.getElementById('prodDesc').value.trim();
+            const price = parseInt(document.getElementById('prodPrice').value);
+            const type = document.getElementById('prodType').value;
+            const status = document.getElementById('prodStatus').value;
+            const errorEl = document.getElementById('productModalError');
+            
+            if (!name || !price) { errorEl.textContent = 'Название и цена обязательны'; return; }
+            
+            errorEl.textContent = '⏳ Сохранение...';
+            
+            try {
+                let imageUrl = '';
+                let mediaUrl = '';
+                
+                // Загружаем фото
+                const imgFile = document.getElementById('prodImage').files[0];
+                if (imgFile) {
+                    const imgRef = storage.ref(`products/${Date.now()}_${imgFile.name}`);
+                    await imgRef.put(imgFile);
+                    imageUrl = await imgRef.getDownloadURL();
+                } else if (id) {
+                    const existing = await db.collection('products').doc(id).get();
+                    imageUrl = existing.data()?.imageUrl || '';
+                }
+                
+                // Загружаем медиафайл
+                const mediaFile = document.getElementById('prodMediaFile').files[0];
+                if (mediaFile && type === 'digital') {
+                    const mediaRef = storage.ref(`media/${Date.now()}_${mediaFile.name}`);
+                    await mediaRef.put(mediaFile);
+                    mediaUrl = await mediaRef.getDownloadURL();
+                } else if (id && type === 'digital') {
+                    const existing = await db.collection('products').doc(id).get();
+                    mediaUrl = existing.data()?.mediaUrl || '';
+                }
+                
+                const productData = {
+                    name, description, price, type, status, imageUrl, mediaUrl,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                };
+                
+                if (id) {
+                    await db.collection('products').doc(id).update(productData);
+                } else {
+                    productData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    await db.collection('products').add(productData);
+                }
+                
+                closeProductModal();
+                await loadAdminProducts();
+                await loadProducts();
+                toast(id ? '✅ Товар обновлён' : '✅ Товар добавлен', 'success');
+            } catch (e) {
+                errorEl.textContent = 'Ошибка: ' + e.message;
+            }
+        }
+
+        async function editProduct(productId) {
+            const doc = await db.collection('products').doc(productId).get();
+            if (doc.exists) {
+                allProducts = [{ id: doc.id, ...doc.data() }];
+                openProductModal(productId);
+            }
+        }
+
+        async function deleteProduct(productId) {
+            if (confirm('Удалить товар?')) {
+                await db.collection('products').doc(productId).delete();
+                await loadAdminProducts();
+                await loadProducts();
+                toast('🗑 Товар удалён', 'info');
+            }
+        }
+
+        // ==================== УТИЛИТЫ ====================
+        function toast(msg, type='info') {
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            document.getElementById('toastContainer').appendChild(t);
+            setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(),300); }, 2500);
+        }
+
+        return {
+            init, login, register, logout,
+            addToCart, removeFromCart, buyNow, checkout,
+            simulatePayment, closePaymentModal,
+            openProductModal, closeProductModal, previewProductImage,
+            saveProduct, editProduct, deleteProduct,
+            navigateTo, loadProducts, renderCart,
+        };
+    })();
+
+    document.addEventListener('DOMContentLoaded', () => App.init());
+    window.App = App;
+    </script>
+</body>
+</html>
